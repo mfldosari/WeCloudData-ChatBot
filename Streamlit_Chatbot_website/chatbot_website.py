@@ -27,7 +27,7 @@ if 'useravatar' not in st.session_state:
 load_dotenv('../.env')
 
 # Accessing the environment variable (access token for openai to run and generate the model)
-api_key = os.getenv("GPTa-ACCESS-TOKEN")
+api_key = os.getenv("GPT-ACCESS-TOKEN")
 
 # providing the key to the apiKey method in the openai class 
 openai.api_key = api_key 
@@ -73,8 +73,8 @@ def display_chat_message(message, avatar_img_path):
 # function for updating the avater if there is an error or be normal if there is no error by setting post = normal
 def avatar_updater(role, post='normal'):
     path = None
-    paths_bot = ['../Image_gallery/normalChatbot.jpg','../Image_gallery/errorImage.jpg']
-    paths_user = ['../Image_gallery/boy.png','../Image_gallery/girl.png', "../Image_gallery/defult.png" ]
+    paths_bot = ['Image_gallery/normalChatbot.jpg','Image_gallery/errorImage.jpg']
+    paths_user = ['Image_gallery/boy.png','Image_gallery/girl.png', "Image_gallery/defult.png" ]
     
     if role == 'bot':
         if post=='error':
@@ -147,27 +147,33 @@ def MidSection():
 MidSection()
 # Side Bar section:
 def button_ops_section():
-    st.sidebar.image('../Image_gallery/g2.gif')
-    st.sidebar.header("Chat Options:")
-    st.sidebar.header("Upload PDF file")
-    button_upload = st.sidebar.button(':material/file_upload: Upload')
-    st.sidebar.header("I am a:")
+    #creating some elements such as title, caption, checkboxes and a button
+    st.sidebar.image('Image_gallery/g2.gif')
+    st.sidebar.title("Chat Options:")
+    st.sidebar.caption("Change Your Name:")
+    name_input = st.sidebar.chat_input("enter name")
+    st.sidebar.caption("Upload PDF file")
     
-    # Create checkboxes for interaction inside the sidebar
+    button_upload = st.sidebar.button(':material/file_upload: Upload')
+    st.sidebar.caption("I am a:")
+    avatar_update_msg = 'avatar updated successfully.. to view the update send any message'
+   
     selection_boy = st.sidebar.checkbox(":material/male: Male", key='boy_echbox')
     selection_girl = st.sidebar.checkbox(":material/female: Female", key='girl_echbox')
+
+    #if condition block to handle clikcing and entering a name
     if selection_boy and selection_girl:
        st.session_state.useravatar[0] = 'defult'
-       st.rerun()
-
     if selection_boy:
         st.session_state.useravatar[0] = 'boy'
-        st.sidebar.success("updated successfully..")
-        st.rerun()
+        st.success(f"{st.session_state.username}'s {avatar_update_msg}")
     if selection_girl:
         st.session_state.useravatar[0] = 'girl'
-        st.sidebar.success("updated successfully..")
-        st.rerun()
+        st.success(f"{st.session_state.username}'s {avatar_update_msg}")
+    if name_input:
+        st.session_state.username = name_input
+        st.success(f"Good News {name_input}, name updated successfully..{avatar_update_msg[29:]}")
+        
         
     
 button_ops_section()
