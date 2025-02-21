@@ -145,47 +145,12 @@ def MidSection():
 
 # Call the MidSection function to display chat interface
 MidSection()
-
-def greeting_effect():
-    greetings = ['Hello User', 'How is your day?', 'I hope you are doing well', 'Remember! you are killing it!', 'Smile..', 'Bye Bye..']
-    text = st.container()  # Placeholder to update text content
-    while True:
-        for greet in greetings:
-            current_text = ""
-            for g in greet:
-                current_text += g
-                text.text(current_text)  # Update the text displayed in Streamlit
-                time.sleep(0.1)  # Delay for the typing effect
-            time.sleep(0.5)  # Delay between greetings
-
-#############       #####################################################################################################
-#############       #####################################################################################################
-#############       THIS SECTION IS THE END OF MID SECTION CHAT BOX AND IT CAN BE MODIFED AND EXTNED LONGER BUT MUST NOT
-#############       ######################################################################################################
-#############       CONFLICT WITH THE FOLLOWING SECTIONS AS EACH SECTION SHOULD HAVE ITS OWN SPACE TO STAY
-#############       #####################################################################################################
-#############       ORGANISABLE AND FIND WHATEVER WE WANT QUICKER AND FASTER. THANK YOU
-#########################################################################################################################
-
-
-#########################################################################################################################
-#########################################################################################################################
-
-#############       THIS SECTION IS THE START OF BUTTONS OPS SECTION AND IT CAN BE MODIFED AND EXTNED LONGER BUT MUST NOT
-#############       #####################################################################################################
-#############       CONFLICT WITH THE FOLLOWING SECTIONS AS EACH SECTION SHOULD HAVE ITS OWN SPACE TO STAY
-#############       #####################################################################################################
-#############       ORGANISABLE AND FIND WHATEVER WE WANT QUICKER AND FASTER. THANK YOU
-#############       #####################################################################################################
-          
-#greeting_effect()
- 
+# Side Bar section:
 def button_ops_section():
     st.sidebar.image('../Image_gallery/g2.gif')
     st.sidebar.header("Chat Options:")
     st.sidebar.header("Upload PDF file")
     button_upload = st.sidebar.button(':material/file_upload: Upload')
-    # If the button with the icon is clicked, open the sidebar
     st.sidebar.header("I am a:")
     
     # Create checkboxes for interaction inside the sidebar
@@ -206,14 +171,3 @@ def button_ops_section():
         
     
 button_ops_section()
- 
-
-
-#############       #############################################################################################
-#############       #############################################################################################
-#############       THIS SECTION IS THE END OF BUTTONS OPS AND IT CAN BE MODIFED AND EXTNED LONGER BUT MUST NOT
-#############       #############################################################################################
-#############       CONFLICT WITH THE FOLLOWING SECTIONS AS EACH SECTION SHOULD HAVE ITS OWN SPACE TO STAY
-#############       #############################################################################################
-#############       ORGANISABLE AND FIND WHATEVER WE WANT QUICKER AND FASTER. THANK YOU
-#################################################################################################################
