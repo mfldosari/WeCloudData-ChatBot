@@ -24,7 +24,7 @@ if 'useravatar' not in st.session_state:
     st.session_state.useravatar = ['defult']
     
 # Loading the .env file
-load_dotenv('../.env')
+load_dotenv('.env')
 
 # Accessing the environment variable (access token for openai to run and generate the model)
 api_key = os.getenv("GPT-ACCESS-TOKEN")
@@ -155,8 +155,8 @@ def button_ops_section():
     st.sidebar.caption("Upload PDF file")
     
     button_upload = st.sidebar.button(':material/file_upload: Upload')
+    
     st.sidebar.caption("I am a:")
-    avatar_update_msg = 'avatar updated successfully.. to view the update send any message'
    
     selection_boy = st.sidebar.checkbox(":material/male: Male", key='boy_echbox')
     selection_girl = st.sidebar.checkbox(":material/female: Female", key='girl_echbox')
@@ -164,16 +164,16 @@ def button_ops_section():
     #if condition block to handle clikcing and entering a name
     if selection_boy and selection_girl:
        st.session_state.useravatar[0] = 'defult'
+       st.rerun()
     if selection_boy:
         st.session_state.useravatar[0] = 'boy'
-        st.success(f"{st.session_state.username}'s {avatar_update_msg}")
+        st.rerun()
     if selection_girl:
         st.session_state.useravatar[0] = 'girl'
-        st.success(f"{st.session_state.username}'s {avatar_update_msg}")
+        st.rerun()
     if name_input:
         st.session_state.username = name_input
-        st.success(f"Good News {name_input}, name updated successfully..{avatar_update_msg[29:]}")
+        st.success(f"Good News {name_input}, name updated successfully..")
+ 
         
-        
-    
 button_ops_section()
