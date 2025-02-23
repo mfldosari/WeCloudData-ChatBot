@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 import streamlit as st
 from PIL import Image
 import streamlit as st
@@ -11,7 +12,11 @@ from chatbot_request import get_openai_response
 
 # Initializing session state for username if it doesn't exist
 if 'username' not in st.session_state:
-    st.session_state.username = 'Guest'
+    st.session_state.username = 'User'
+    
+# Initializing session state for username if it doesn't exist
+if 'current_chat_name' not in st.session_state:
+    st.session_state.current_chat_name = 'untitled chat'
 
 # Initializing session state for bot status if it doesn't exist
 if 'botStatus' not in st.session_state:
@@ -114,16 +119,29 @@ MidSection()
 # Side Bar section:
 def button_ops_section():
     #creating some elements such as title, caption, checkboxes and a button
-    st.sidebar.image('Image_gallery/g2.gif')
     st.sidebar.title("Chat Options:")
-    st.sidebar.caption("Chat Name:")
-    name_input = st.sidebar.chat_input("enter chat name")
+    
+    # Creating columns to display buttons horizontally
+    col1, col2, col3 = st.sidebar.columns(3)
+
+    with col1:
+        delete_chat = st.button(':material/delete:')
+
+    with col2:
+        add_new_chat = st.button(':material/add:')
+
+    with col3:
+        load_prev_chat = st.button(':material/cloud_download:')
+    
+    
+    st.sidebar.caption("Current Chat Name:")
+    name_input = st.sidebar.chat_input(f"{st.session_state.current_chat_name}")
+
     st.sidebar.caption("Upload PDF file")
     
     button_upload = st.sidebar.button(':material/file_upload: Upload')
     
     st.sidebar.caption("I am a:")
-   
     selection_boy = st.sidebar.checkbox(":material/male: Male", key='boy_echbox')
     selection_girl = st.sidebar.checkbox(":material/female: Female", key='girl_echbox')
 
@@ -138,8 +156,11 @@ def button_ops_section():
         st.session_state.useravatar[0] = 'girl'
         st.rerun()
     if name_input:
-        st.session_state.username = name_input
-        st.success(f"Good News {name_input}, name updated successfully..")
+        st.session_state.current_chat_name = name_input
+        with st.spinner('renaming new chat..'):
+            time.sleep(1)  # Simulate a long task
+        st.success(f"Good News, Chat named as ({name_input}) successfully..")
+        st.rerun()
  
         
 button_ops_section()
