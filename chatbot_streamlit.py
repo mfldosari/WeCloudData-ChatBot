@@ -82,6 +82,8 @@ def MidSection():
     # Handling user message and bot response
     if user_msg:
         # Appending user message to chat history only when the message is sent
+        # this section for user chathistory storing it in a list and the list contains dir {}. same proccess as chatbot.
+        # but for the user, check explaintion down
         user_message_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         st.session_state.chat_history.append({"role": "user", "content": user_msg, "time":user_message_time})
 
@@ -91,6 +93,10 @@ def MidSection():
             # call the openai and plug the chat_history to get the chatbot reponse
             chatbot_response = get_openai_response(st.session_state.chat_history)
             # Saving the bot's response to the chat history after the delay
+            # basiclly in this step or line we are storing chatbot's response in a list[] and this list contains a dir{}, 
+            # this dir will contain a role, content and time keys and for the values we have the assitant for role and 
+            # chat_response for content and bot_response_time for time these values will be generating our chathistory for
+            # the bot only. the user chathistory is explained ubove
             st.session_state.chat_history.append({"role": "assistant", "content": chatbot_response, "time":bot_response_time})
             
         except Exception as e:
@@ -103,8 +109,8 @@ def MidSection():
             
     # Displaying updated chat history with user's and bot's messages
     for messages in st.session_state.chat_history:
-        assistant_avatar_path = avatar_updater(role='bot', post=f'{st.session_state.botStatus[0]}')
-        User_avatar_path = avatar_updater(role='user', post=f'{st.session_state.useravatar[0]}')
+        assistant_avatar_path = avatar_updater(role='bot', post=f'{st.session_state.botStatus}')
+        User_avatar_path = avatar_updater(role='user', post=f'{st.session_state.useravatar}')
         if "assistant" == messages['role']:
             # Displaying assistant message with assistant avatar
             message = f" {messages['time']}: \n \n  {messages['content']} <br>"
@@ -157,8 +163,9 @@ def button_ops_section():
     if name_input:
         st.session_state.current_chat_name = name_input
         with st.spinner('renaming new chat..'):
-            time.sleep(1)  
+            time.sleep(1) 
         st.success(f"Good News, Chat named as ({name_input}) successfully..")
+        time.sleep(1)
         st.rerun()
  
         
