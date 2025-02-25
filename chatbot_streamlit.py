@@ -76,11 +76,9 @@ def MidSection():
         bot_msg = f"Hello {st.session_state.username}, How can I help you today?" 
         st.session_state.chat_history.append({"role": "assistant", "content": bot_msg, "time":bot_response_time})
 
-    # Displaing chat input field for user to type their message
-    user_msg = st.chat_input('Your message', key='Usermsg')
 
     # Handling user message and bot response
-    if user_msg:
+    if user_msg := st.chat_input("How can i help you today"):
         # Appending user message to chat history only when the message is sent
         # this section for user chathistory storing it in a list and the list contains dir {}. same proccess as chatbot.
         # but for the user, check explaintion down
