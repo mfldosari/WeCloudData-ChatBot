@@ -1,4 +1,4 @@
-IN-PROGRESS [FIRST STAGE]
+IN-PROGRESS [SECOND STAGE]
 
 ## SDA-WeCloudData-ChatBot-Project
 # ABOUT:
