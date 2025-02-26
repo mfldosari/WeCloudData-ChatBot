@@ -78,7 +78,7 @@ def MidSection():
 
 
     # Handling user message and bot response
-    if user_msg := st.chat_input("How can i help you today"):
+    if user_msg := st.chat_input("How can i help you today", key='user_chat_entry'):
         # Appending user message to chat history only when the message is sent
         # this section for user chathistory storing it in a list and the list contains dir {}. same proccess as chatbot.
         # but for the user, check explaintion down
@@ -140,7 +140,16 @@ def button_ops_section():
     
     # section to rename and name the current chat
     st.sidebar.caption("Current Chat Name:")
-    name_input = st.sidebar.chat_input(f"{st.session_state.current_chat_name}")
+    #this if block checks when the user enter a name of chat
+    # if yes, then save the value (chat name) to a var called name_input
+    if name_input := st.sidebar.chat_input(f"{st.session_state.current_chat_name}", key='chatname'):
+        st.session_state.current_chat_name = name_input
+        with st.spinner('renaming new chat..'): # <-- this section will act as a spinner that loads for a 1 second then quit
+            time.sleep(1) # <-- sleep for 1 second. it can be modifed
+        st.success(f"Good News, Chat named as ({name_input}) successfully..") #<-- success notification
+        time.sleep(1) # <-- sleep for one second and then rerun the app
+        st.rerun() # <-- rerun the app
+
     # section to upload pdf
     st.sidebar.caption("Upload PDF file")
     button_upload = st.sidebar.button(':material/file_upload: Upload')
@@ -149,23 +158,18 @@ def button_ops_section():
     selection_boy = st.sidebar.checkbox(":material/male: Male", key='boy_echbox')
     selection_girl = st.sidebar.checkbox(":material/female: Female", key='girl_echbox')
 
-    #if condition block to handle clikcing and entering a name
+    #if condition block to handle clikcing and entering a name:
+    # first if, checks if both checkboxes has been clicked set the avatar is defult then rerun the app 
     if selection_boy and selection_girl:
        st.session_state.useravatar = 'defult'
        st.rerun()
+    # second if, checks if the boy checkbox has been clicked set the avatar as boy and rerun 
     if selection_boy:
         st.session_state.useravatar = 'boy'
         st.rerun()
+    # third if, checks if the girl checkbox has been clicked then set the avatar as girl and rerun the app
     if selection_girl:
         st.session_state.useravatar = 'girl'
         st.rerun()
-    if name_input:
-        st.session_state.current_chat_name = name_input
-        with st.spinner('renaming new chat..'):
-            time.sleep(1) 
-        st.success(f"Good News, Chat named as ({name_input}) successfully..")
-        time.sleep(1)
-        st.rerun()
- 
-        
+# call the function to display the sidebar section        
 button_ops_section()
