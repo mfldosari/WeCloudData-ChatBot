@@ -107,6 +107,7 @@ def MidSection():
             
     # Displaying updated chat history with user's and bot's messages
     for messages in st.session_state.chat_history:
+        # call the avatar function to update the path of the bot's or and user's avatar 
         assistant_avatar_path = avatar_updater(role='bot', post=f'{st.session_state.botStatus}')
         User_avatar_path = avatar_updater(role='user', post=f'{st.session_state.useravatar}')
         if "assistant" == messages['role']:
