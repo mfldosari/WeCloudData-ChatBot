@@ -1,178 +1,229 @@
-from datetime import datetime
-import time
-import streamlit as st
-from PIL import Image
 import streamlit as st
 from datetime import datetime
 from PIL import Image
 import base64
 import io
+import requests
+import uuid
 
-from chatbot_request import get_openai_response
+# Initialize session state
+if "history_chats" not in st.session_state:
+    st.session_state["history_chats"] = []  # List of chats: [{"id": "chat_id", "messages": [...]}, ...]
+if "current_chat" not in st.session_state:
+    st.session_state["current_chat"] = None  # ID of the current chat
+if "chat_names" not in st.session_state:
+    st.session_state["chat_names"] = {}  # Dictionary mapping chat IDs to names
+if "useravatar" not in st.session_state:
+    st.session_state["useravatar"] = "default"  # User's avatar selection
 
-# Initializing session state for username if it doesn't exist
-if 'username' not in st.session_state:
-    st.session_state.username = 'User'
-    
-# Initializing session state for chat name if it doesn't exist
-if 'current_chat_name' not in st.session_state:
-    st.session_state.current_chat_name = 'untitled chat'
-
-# Initializing session state for bot status if it doesn't exist
-if 'botStatus' not in st.session_state:
-    st.session_state.botStatus = 'normal'
-    
-# Initializing session state for bot status if it doesn't exist
-if 'useravatar' not in st.session_state:
-    st.session_state.useravatar = 'defult'
-     
-
-# Helper function to convert image to base64 (to embed it in HTML)
+# Helper functions
 def get_image_base64(img_path):
+    """Convert an image to base64 for embedding (if needed)."""
     img = Image.open(img_path)
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-# Function to display chat messages with avatars
-def display_chat_message(message, avatar_img_path):
-    avatar_base64 = get_image_base64(avatar_img_path)
-    # Displaing user and chatbot message with avatar
-    st.markdown(f"""
-        <div style="display: flex; align-items: center;">
-            <img src="data:image/png;base64,{avatar_base64}" width="40" height="40" style="border-radius: 50%; margin-right: 10px;">
-            <div> {message} </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-# function for updating the avater if there is an error or be normal if there is no error by setting post = normal
-def avatar_updater(role, post='normal'):
-    path = None
-    paths_bot = ['Image_gallery/normalChatbot.jpg','Image_gallery/errorImage.jpg']
-    paths_user = ['Image_gallery/boy.png','Image_gallery/girl.png', "Image_gallery/defult.png" ]
+def avatar_updater(role, post="normal"):
+    """Determine the avatar image path based on role and status."""
+    paths_bot = ["Image_gallery/normalChatbot.jpg", "Image_gallery/errorImage.jpg"]
+    paths_user = ["Image_gallery/boy.png", "Image_gallery/girl.png", "Image_gallery/defult.png"]
     
-    if role == 'bot':
-        if post=='error':
-           path = paths_bot[1]
-        else:
-           path = paths_bot[0]
+    if role == "bot":
+        return paths_bot[1] if post == "error" else paths_bot[0]
     else:
-        if post == 'defult':
-            path = paths_user[2]
-        elif post =='boy':
-           path = paths_user[0]
+        if post == "boy":
+            return paths_user[0]
+        elif post == "girl":
+            return paths_user[1]
         else:
-           path = paths_user[1]
-         
-    return path
+            return paths_user[2]
 
-bot_response_time = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-# MidSection function to display the chat area and handle user input
-def MidSection():
-    # Initializing session state for chat history if it doesn't exist
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-        # generating the first message of the chatbot to be displayed in the chat box
-        bot_msg = f"Hello {st.session_state.username}, How can I help you today?" 
-        st.session_state.chat_history.append({"role": "assistant", "content": bot_msg, "time":bot_response_time})
+# Chat management functions
+def load_chats_from_db():
+    """Load existing chats from the backend database."""
+    response = requests.get("http://127.0.0.1:8000/load_chat/")
+    if response.status_code == 200:
+        records = response.json()
+        for record in records:
+            chat_id = record["id"]
+            messages = record["messages"]
+            name = record["chat_name"]
+            st.session_state["history_chats"].append({"id": chat_id, "messages": messages})
+            st.session_state["chat_names"][chat_id] = name
+    else:
+        st.toast(f"Failed to load chats. Status code: {response.status_code}")
 
+def save_chat_to_db(chat_id, chat_name, messages):
+    """Save a chat to the backend database."""
+    payload = {"chat_id": chat_id, "chat_name": chat_name, "messages": messages}
+    headers = {"Content-Type": "application/json"}
+    response = requests.post("http://127.0.0.1:8000/save_chat/", json=payload, headers=headers)
+    if response.status_code != 200:
+        st.toast(f"Failed to save chat. Status code: {response.status_code}")
 
-    # Handling user message and bot response
-    if user_msg := st.chat_input("enter your message", key='user_chat_entry'):
-        # Appending user message to chat history only when the message is sent.
-        # Saving the user's response to the chat history 
-        # basiclly in this step or line we are storing user's msg in a list[] and this list contains a dir{}, 
-        # this dir will contain a role, content and time keys. and for the values we have the "user" for role and 
-        # chat_response for content and user_message_time for time these values will be generating our chat history for
-        # the user only. 
-        user_message_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        st.session_state.chat_history.append({"role": "user", "content": user_msg, "time":user_message_time})
+def create_chat(chat_name):
+    """Create a new chat with an initial bot message."""
+    new_chat_id = str(uuid.uuid4())
+    initial_message = {
+        "role": "assistant",
+        "content": "Hello, How can I help you today?",
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": "normal"
+    }
+    new_chat = {"id": new_chat_id, "messages": [initial_message]}
+    st.session_state["history_chats"].insert(0, new_chat)
+    st.session_state["chat_names"][new_chat_id] = chat_name
+    st.session_state["current_chat"] = new_chat_id
+    save_chat_to_db(new_chat_id, chat_name, [initial_message])
+
+def delete_chat():
+    """Delete the current chat from session state and database."""
+    if st.session_state["current_chat"]:
+        chat_id = st.session_state["current_chat"]
+        st.session_state["history_chats"] = [
+            chat for chat in st.session_state["history_chats"] if chat["id"] != chat_id
+        ]
+        del st.session_state["chat_names"][chat_id]
+        payload = {"chat_id": chat_id}
+        headers = {"Content-Type": "application/json"}
+        response = requests.post("http://127.0.0.1:8000/delete_chat/", json=payload, headers=headers)
+        if response.status_code != 200:
+            st.toast(f"Failed to delete chat. Status code: {response.status_code}")
+        st.session_state["current_chat"] = (
+            st.session_state["history_chats"][0]["id"] if st.session_state["history_chats"] else None
+        )
+
+def select_chat(chat_id):
+    """Select a chat by its ID."""
+    st.session_state["current_chat"] = chat_id
+
+def get_current_messages():
+    """Retrieve messages of the current chat."""
+    if st.session_state["current_chat"]:
+        for chat in st.session_state["history_chats"]:
+            if chat["id"] == st.session_state["current_chat"]:
+                return chat["messages"]
+    return []
+
+# Load existing chats
+load_chats_from_db()
+
+# Sidebar
+with st.sidebar:
+    st.title("Chat Options")
+
+    # Create new chat
+    chat_name = st.text_input("Enter Chat Name:", key="new_chat_name")
+    if st.button("Create New Chat"):
+        if chat_name.strip():
+            create_chat(chat_name.strip())
+        else:
+            st.toast("Chat name cannot be empty.")
+
+    # Select existing chat
+    if st.session_state["history_chats"]:
+        chat_options = {
+            chat["id"]: st.session_state["chat_names"][chat["id"]]
+            for chat in st.session_state["history_chats"]
+        }
+        default_index = 0
+        if st.session_state["current_chat"] in chat_options:
+            default_index = list(chat_options.keys()).index(st.session_state["current_chat"])
+        selected_chat = st.radio(
+            "Select Chat",
+            options=list(chat_options.keys()),
+            format_func=lambda x: chat_options[x],
+            index=default_index,
+            key="chat_selector",
+        )
+        if selected_chat != st.session_state["current_chat"]:
+            select_chat(selected_chat)
+
+    # Delete current chat
+    if st.session_state["current_chat"]:
+        if st.button("Delete Chat"):
+            delete_chat()
+
+    # Upload PDF
+    st.caption("Upload PDF file")
+    button_upload = st.button(":material/file_upload: Upload")
+    # Add PDF upload logic here if needed
+
+    # Select gender for user avatar
+    st.caption("I am a:")
+    selection_boy = st.checkbox(":material/male: Male", key="boy_echbox")
+    selection_girl = st.checkbox(":material/female: Female", key="girl_echbox")
+    if selection_boy and selection_girl:
+        st.session_state["useravatar"] = "default"
+    elif selection_boy:
+        st.session_state["useravatar"] = "boy"
+    elif selection_girl:
+        st.session_state["useravatar"] = "girl"
+    else:
+        st.session_state["useravatar"] = "default"
+
+# Main Content
+st.title("Chatbot Application")
+
+if st.session_state["current_chat"]:
+    chat_id = st.session_state["current_chat"]
+    chat_name = st.session_state["chat_names"][chat_id]
+    st.subheader(f"Current Chat is => {chat_name}")
+
+    current_messages = get_current_messages()
+
+    # Display chat history with avatars
+    for message in current_messages:
+        role = message["role"]
+        content = message["content"]
+        timestamp = message.get("time", "")
+        if role == "assistant":
+            status = message.get("status", "normal")
+            avatar_path = avatar_updater(role="bot", post=status)
+        else:
+            avatar_path = avatar_updater(role="user", post=st.session_state["useravatar"])
+        avatar_img = Image.open(avatar_path)
+        with st.chat_message(role, avatar=avatar_img):
+            st.markdown(f"{timestamp}: {content}")
+
+    # Handle user input
+    if user_msg := st.chat_input("Enter your message", key="user_chat_entry"):
+        user_message_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_messages.append({"role": "user", "content": user_msg, "time": user_message_time})
+        save_chat_to_db(chat_id, chat_name, current_messages)
 
         try:
-            # try and expect block to handle errors and success responses
-            st.session_state.botStatus = 'normal'
-            # call the openai and plug the chat_history to get the chatbot reponse
-            chatbot_response = get_openai_response(st.session_state.chat_history)
-            # Saving the bot's response to the chat history after the delay
-            # basiclly in this step or line we are storing chatbot's response in a list[] and this list contains a dir{}, 
-            # this dir will contain a role, content and time keys and for the values we have the assitant for role and 
-            # chat_response for content and bot_response_time for time these values will be generating our chathistory for
-            # the bot only. the user chathistory is explained ubove
-            st.session_state.chat_history.append({"role": "assistant", "content": chatbot_response, "time":bot_response_time})
-            
+            # Send message to backend and stream response
+            payload = {
+                "messages": [{"role": m["role"], "content": m["content"]} for m in current_messages]
+            }
+            headers = {"Content-Type": "application/json"}
+
+            def get_stream_response():
+                with requests.post("http://127.0.0.1:8000/chat/", json=payload, headers=headers, stream=True) as r:
+                    for chunk in r:
+                        yield chunk.decode("utf-8")
+
+            response = st.write_stream(get_stream_response)
+            bot_response_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            current_messages.append({
+                "role": "assistant",
+                "content": response,
+                "time": bot_response_time,
+                "status": "normal"
+            })
+            save_chat_to_db(chat_id, chat_name, current_messages)
         except Exception as e:
-            # Show a notification of the error and notify the user. (e.g api not givin or unaccessable api)
-            st.session_state.botStatus = 'error'
+            error_msg = "\n Sorry, but something went wrong. Please try again later."
+            bot_response_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            current_messages.append({
+                "role": "assistant",
+                "content": error_msg,
+                "time": bot_response_time,
+                "status": "error"
+            })
+            save_chat_to_db(chat_id, chat_name, current_messages)
             st.toast("500: Failed to establish a new connection")
-            chatbot_response = f"Sorry {st.session_state.username}, but something went wrong. Please try again later."
-            st.session_state.chat_history.append({"role": "assistant", "content": chatbot_response, "time":bot_response_time})
-
-            
-    # Displaying updated chat history with user's and bot's messages
-    for messages in st.session_state.chat_history:
-        # call the avatar function to update the path of the bot's or and user's avatar 
-        assistant_avatar_path = avatar_updater(role='bot', post=f'{st.session_state.botStatus}')
-        User_avatar_path = avatar_updater(role='user', post=f'{st.session_state.useravatar}')
-        if "assistant" == messages['role']:
-            # Displaying assistant message with assistant avatar
-            message = f" {messages['time']}: \n \n  {messages['content']} <br>"
-            display_chat_message(message, assistant_avatar_path)
-        else:
-            message = f" {messages['time']}:\n \n  {messages['content']} <br> "
-            # Displaying user message with user avatar
-            display_chat_message(message, User_avatar_path)
-
-# Call the MidSection function to display chat interface
-MidSection()
-# Side Bar section:
-def button_ops_section():
-    #creating some elements such as title, caption, checkboxes and a buttons
-    st.sidebar.title("Chat Options:")
-    
-    # Creating columns to display buttons horizontally
-    col1, col2, col3 = st.sidebar.columns(3)
-    # delete button for deleting a current chat or stored chats
-    with col1:
-        delete_chat = st.button(':material/delete:')
-    #add new button, to add a new chat and store it if needed
-    with col2:
-        add_new_chat = st.button(':material/add:')
-    # loading old chats button to load chats that were stored in the storage
-    with col3:
-        load_prev_chat = st.button(':material/search:')
-    
-    # section to rename and name the current chat
-    st.sidebar.caption("Current Chat Name:")
-    #this if block checks when the user enter a name of chat
-    # if yes, then save the value (chat name) to a var called name_input
-    if name_input := st.sidebar.chat_input(f"{st.session_state.current_chat_name}", key='chatname'):
-        st.session_state.current_chat_name = name_input
-        with st.spinner('renaming new chat..'): # <-- this section will act as a spinner that loads for a 1 second then quit
-            time.sleep(1) # <-- sleep for 1 second. it can be modifed
-        st.success(f"Good News, Chat named as ({name_input}) successfully..") #<-- success notification
-        time.sleep(1) # <-- sleep for one second and then rerun the app
-        st.rerun() # <-- rerun the app
-
-    # section to upload pdf
-    st.sidebar.caption("Upload PDF file")
-    button_upload = st.sidebar.button(':material/file_upload: Upload')
-    # section to chnage gendre (not necessary and could be deleted, if decided to delete make sure to delete its related functio too)
-    st.sidebar.caption("I am a:")
-    selection_boy = st.sidebar.checkbox(":material/male: Male", key='boy_echbox')
-    selection_girl = st.sidebar.checkbox(":material/female: Female", key='girl_echbox')
-
-    #if condition block to handle clikcing and entering a name:
-    # first if, checks if both checkboxes has been clicked set the avatar is defult then rerun the app 
-    if selection_boy and selection_girl:
-       st.session_state.useravatar = 'defult'
-       st.rerun()
-    # second if, checks if the boy checkbox has been clicked set the avatar as boy and rerun 
-    if selection_boy:
-        st.session_state.useravatar = 'boy'
-        st.rerun()
-    # third if, checks if the girl checkbox has been clicked then set the avatar as girl and rerun the app
-    if selection_girl:
-        st.session_state.useravatar = 'girl'
-        st.rerun()
-# call the function to display the sidebar section        
-button_ops_section()
+else:
+    st.write("No chat selected. Use the sidebar to create or select a chat.")
