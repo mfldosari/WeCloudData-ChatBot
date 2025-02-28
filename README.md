@@ -1,6 +1,6 @@
 IN-PROGRESS [SECOND STAGE]
 
-* *NOTE*: TO RUN THE CHAT_STREAMLIT SCRIPT YOU NEED TO BE AT THE REPO DIR AND RUN THE STREAMLIT COMMAND TO AVOID PATH CONFLECTION OF IMAGES...
+* *NOTE*: TO RUN THE CHATBOT RUN THE SCRIPT
 ## SDA-WeCloudData-ChatBot-Project
 # ABOUT:
 #### Designing, implementing, developing and deploying a chatbot using python
