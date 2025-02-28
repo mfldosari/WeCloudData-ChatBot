@@ -1,6 +1,6 @@
 IN-PROGRESS [SECOND STAGE]
 
-* *NOTE*: TO RUN THE CHATBOT RUN THE SCRIPT
+* *NOTE*: TO RUN THE CHATBOT RUN THE setup.sh SCRIPT first then run.sh
 ## SDA-WeCloudData-ChatBot-Project
 # ABOUT:
 #### Designing, implementing, developing and deploying a chatbot using python
