@@ -1,5 +1,3 @@
-IN-PROGRESS [SECOND STAGE]
-
 * *NOTE*: TO RUN THE CHATBOT RUN THE setup.sh SCRIPT first then run.sh
 ## SDA-WeCloudData-ChatBot-Project
 # ABOUT:
