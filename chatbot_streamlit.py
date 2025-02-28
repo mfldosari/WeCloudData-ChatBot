@@ -23,17 +23,17 @@ if "chat_names" not in st.session_state:
 # ------------------------------
 # Avatar Helper (from Code 1)
 # ------------------------------
-def avatar_updater(role, post="normal"):
+def avatar_updater(role):
     """
     Return the appropriate avatar image path based on the message role.
     For assistant messages, choose between a normal or error avatar.
     For user messages, return the default user avatar.
     """
     # Adjust paths as necessary:
-    paths_bot = ["Image_gallery/normalChatbot.jpg", "Image_gallery/errorImage.jpg"]
-    path_user = "Image_gallery/defult.png"
+    path_bot = "Image_gallery/bot.png"
+    path_user = "Image_gallery/user.png"
     if role == "assistant":
-        return paths_bot[1] if post == "error" else paths_bot[0]
+        return path_bot
     else:
         return path_user
 
@@ -140,14 +140,14 @@ load_chats_from_db()
 # ------------------------------
 with st.sidebar:
     st.title("Chat Management")
-    uploaded_pdf = st.file_uploader("Upload PDF", type="pdf", key="pdf_uploader")
+    uploaded_pdf = st.file_uploader("Upload PDF 📄:", type="pdf", key="pdf_uploader")
     chat_name = st.text_input("Enter Chat Name:", key="new_chat_name")
-    if st.button("Create New Chat"):
+    if st.button(":material/add: Create New Chat"):
         if chat_name.strip():
             create_chat(chat_name.strip())
         else:
             st.warning("Chat name cannot be empty.")
-    if st.button("Create New Chat with PDF"):
+    if st.button(":material/cloud_download: Create New Chat with PDF"):
         if not uploaded_pdf:
             st.warning("Please upload a PDF file before creating the chat.")
         elif chat_name.strip():
@@ -167,16 +167,16 @@ with st.sidebar:
             on_change=lambda: select_chat(st.session_state.chat_selector),
         )
         st.session_state["current_chat"] = selected_chat
-        st.button("Delete Chat", on_click=delete_chat)
+        st.button(":material/delete: Delete Chat", on_click=delete_chat)
 
 # ------------------------------
 # Main Content: Chat Interface with Avatars
 # ------------------------------
-st.title("Chatbot Application")
+st.header("Chatbot Application")
 if st.session_state["current_chat"]:
     chat_id = st.session_state["current_chat"]
     chat_name = st.session_state["chat_names"][chat_id]
-    st.subheader(f"Current Chat: {chat_name}")
+    st.info(f"Current Chat: {chat_name}")
 
     current_chat = next(
         (chat for chat in st.session_state["history_chats"] if chat["id"] == chat_id),
@@ -192,7 +192,6 @@ if st.session_state["current_chat"]:
         initial_message = {
             "role": "assistant",
             "content": greeting,
-            "status": "normal",
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         current_chat["messages"].append(initial_message)
@@ -208,19 +207,19 @@ if st.session_state["current_chat"]:
     if current_chat:
         if current_chat["pdf_name"]:
             pdf_name = current_chat["pdf_name"]
-            st.subheader(f"Associated with: {pdf_name}")
+            st.info(f"Associated with: {pdf_name}")
 
         # Display chat messages with avatars
         for message in current_chat["messages"]:
             role = message["role"]
             if role == "assistant":
-                status = message.get("status", "normal")
-                avatar_path = avatar_updater("assistant", post=status)
+                avatar_path = avatar_updater("assistant")
             else:
                 avatar_path = avatar_updater("user")
             avatar_img = Image.open(avatar_path)
             with st.chat_message(role, avatar=avatar_img):
-                st.markdown(message["content"])
+                st.caption(f"{message["time"]}")
+                st.markdown(f'{message["content"]}')
 
         # Chat input section
         prompt = st.chat_input("Your Message:")
@@ -232,6 +231,7 @@ if st.session_state["current_chat"]:
             }
             current_chat["messages"].append(user_message)
             with st.chat_message("user", avatar=Image.open(avatar_updater("user"))):
+                st.caption(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 st.markdown(prompt)
 
             # Prepare payload for backend
@@ -257,20 +257,22 @@ if st.session_state["current_chat"]:
             # Display bot response with avatar while streaming
             bot_avatar = Image.open(avatar_updater("assistant"))
             response_text = ""
-            with st.chat_message("assistant", avatar=bot_avatar) as message_container:
+            get_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with st.chat_message("assistant", avatar=bot_avatar):
+                time = st.empty()
                 text = st.empty()
                 with st.spinner(' '):
                     for chunk in get_stream_response():
                         response_text += chunk
                     # Update the message continuously with the streamed text
+                    time.caption(get_time)
                     text.text(response_text)
 
             # Append the complete bot response to chat history
             bot_message = {
                 "role": "assistant",
                 "content": response_text,
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "status": "normal"
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             current_chat["messages"].append(bot_message)
             save_chat_to_db(
