@@ -40,7 +40,7 @@ done
 success ".env file loaded successfully."
 
 # Define paths
-REQUIREMENTS_FILE="$CURRENT_DIR/requirments.txt"
+REQUIREMENTS_FILE="$CURRENT_DIR/requirements.txt"
 
 # Check if running inside a virtual environment
 if [ -z "$VIRTUAL_ENV" ]; then
