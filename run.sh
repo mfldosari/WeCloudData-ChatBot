@@ -23,6 +23,11 @@ chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &
 CHROMA_PID=$!
 success "ChromaDB started with PID $CHROMA_PID. Logs: $LOGS_DIR/chroma.log"
 
+echo "================================================="
+success "Chrmoa is up and running!"
+success "Access Chrmoa at: http://127.0.0.1:8000/docs"
+echo "================================================="
+
 # Start FastAPI backend with Uvicorn
 info "Starting FastAPI backend..."
 uvicorn chatbot_fastapi:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &
@@ -52,7 +57,7 @@ streamlit run "$CHATBOT_SCRIPT" --server.port 8501 > "$LOGS_DIR/streamlit.log" 2
 CHATBOT_PID=$!
 echo "================================================="
 success "Streamlit chatbot started with PID $CHATBOT_PID. Logs: $LOGS_DIR/streamlit.log"
-success " Access Streamlit at: http://127.0.0.1:8501"
+success "Access Streamlit at: http://127.0.0.1:8501"
 echo "================================================="
 
 # Wait for processes to complete
