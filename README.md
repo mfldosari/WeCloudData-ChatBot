@@ -10,5 +10,3 @@
 
 
 Thank You for Reading and the chatbot can be accessed in the cloud but meanwhile it is under deployment:
-
-<img src="https://github.com/Maldoasari/SDA-WeCloudData-ChatBot-Project/blob/main/Image_gallery/g2.gif" width="300" height="300">
