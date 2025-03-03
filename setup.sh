@@ -42,14 +42,6 @@ success ".env file loaded successfully."
 # Define paths
 REQUIREMENTS_FILE="$CURRENT_DIR/requirements.txt"
 
-# Check if running inside a virtual environment
-if [ -z "$VIRTUAL_ENV" ]; then
-  error "Warning: It appears that you are not using a virtual environment."
-  error "Please activate your virtual environment before running this script."
-  exit 1
-else
-  success "Virtual environment is active: $VIRTUAL_ENV"
-fi
 
 # Check if the requirements file exists
 if [ ! -f "$REQUIREMENTS_FILE" ]; then
