@@ -15,7 +15,7 @@ info "Logs will be stored in: $LOGS_DIR"
 
 # Define paths
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
-CHATBOT_SCRIPT="$CURRENT_DIR/chatbot_streamlit.py"
+CHATBOT_SCRIPT="$CURRENT_DIR/chatbot.py"
 # Get the server's IP address dynamically
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
@@ -32,7 +32,7 @@ echo "================================================="
 
 # Start FastAPI backend with Uvicorn
 info "Starting FastAPI backend..."
-uvicorn chatbot_fastapi:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &
+uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 success "FastAPI backend started with PID $BACKEND_PID. Logs: $LOGS_DIR/backend.log"
 
