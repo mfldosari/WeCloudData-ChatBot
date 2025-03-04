@@ -16,6 +16,8 @@ info "Logs will be stored in: $LOGS_DIR"
 # Define paths
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
 CHATBOT_SCRIPT="$CURRENT_DIR/chatbot_streamlit.py"
+# Get the server's IP address dynamically
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
 # Start ChromaDB
 info "Starting ChromaDB..."
@@ -47,17 +49,19 @@ while ! nc -z 127.0.0.1 5000; do
   fi
   info "Waiting for FastAPI..."
 done
+
+
 echo "================================================="
 success "FastAPI is up and running!"
-success "Access FastAPI at: http://127.0.0.1:5000/docs"
+success "Access FastAPI at: http://$SERVER_IP:5000/docs"
 echo "================================================="
 # Start Streamlit chatbot
 info "Starting Streamlit chatbot..."
-streamlit run "$CHATBOT_SCRIPT" --server.port 8501 > "$LOGS_DIR/streamlit.log" 2>&1 &
+streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &
 CHATBOT_PID=$!
 echo "================================================="
 success "Streamlit chatbot started with PID $CHATBOT_PID. Logs: $LOGS_DIR/streamlit.log"
-success "Access Streamlit at: http://127.0.0.1:8501"
+success "Access Streamlit at: http://$SERVER_IP:8502"
 echo "================================================="
 
 # Wait for processes to complete
