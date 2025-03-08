@@ -5,65 +5,82 @@ info() { echo -e "\033[34m$1\033[0m"; }  # Blue
 success() { echo -e "\033[32m$1\033[0m"; }  # Green
 error() { echo -e "\033[31m$1\033[0m"; }  # Red
 
-# Get the current directory (expected to be the repo's root)
+# Load environment variables from .env file
+if [ -f .env ]; then
+    source .env
+else
+    error ".env file not found!"
+    exit 1
+fi
+
+# Ensure that GitHub username and PAT are set in the .env file
+if [ -z "$GITHUB_USERNAME" ] || [ -z "$GITHUB_PAT" ]; then
+    error "GitHub username or PAT is missing in .env file!"
+    exit 1
+fi
+
+# Set variables
+REPO_URL="https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/mfldosari/WeCloudData-ChatBot.git"
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
+CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
+CHATBOT_SCRIPT="$CURRENT_DIR/chatbot.py"
+BACKEND_SCRIPT="$CURRENT_DIR/backend.py"
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
 # Ensure logs directory exists
 mkdir -p "$LOGS_DIR"
 info "Logs will be stored in: $LOGS_DIR"
 
-# Define paths
-CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
-CHATBOT_SCRIPT="$CURRENT_DIR/chatbot.py"
-# Get the server's IP address dynamically
-SERVER_IP=$(hostname -I | awk '{print $1}')
+# Pull latest code from GitHub
+info "Updating repository from GitHub..."
+if [ ! -d ".git" ]; then
+    error "This is not a Git repository. Cloning..."
+    git clone $REPO_URL $CURRENT_DIR
+else
+    git pull origin main
+fi
+success "Repository updated successfully."
+
+# Install dependencies
+info "Installing dependencies..."
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+    success "Python dependencies installed."
+fi
 
 # Start ChromaDB
 info "Starting ChromaDB..."
 chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &
 CHROMA_PID=$!
-success "ChromaDB started with PID $CHROMA_PID. Logs: $LOGS_DIR/chroma.log"
+success "ChromaDB started with PID $CHROMA_PID."
 
-echo "================================================="
-success "Chrmoa is up and running!"
-success "Access Chrmoa at: http://127.0.0.1:8000/docs"
-echo "================================================="
-
-# Start FastAPI backend with Uvicorn
+# Start FastAPI backend
 info "Starting FastAPI backend..."
 uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
-success "FastAPI backend started with PID $BACKEND_PID. Logs: $LOGS_DIR/backend.log"
+success "FastAPI backend started with PID $BACKEND_PID."
 
-# Wait until FastAPI is ready (check port 5000) with timeout
+# Wait for FastAPI to be ready
 info "Waiting for FastAPI to start..."
-TIMEOUT=60  # seconds
+TIMEOUT=60
 SECONDS_WAITED=0
 while ! nc -z 127.0.0.1 5000; do
   sleep 1
   SECONDS_WAITED=$((SECONDS_WAITED+1))
   if [ $SECONDS_WAITED -ge $TIMEOUT ]; then
-      error "Error: FastAPI backend did not start within $TIMEOUT seconds. Check logs in $LOGS_DIR/backend.log"
+      error "FastAPI did not start within $TIMEOUT seconds."
       exit 1
   fi
-  info "Waiting for FastAPI..."
 done
+success "FastAPI is running at: http://$SERVER_IP:5000/docs"
 
-
-echo "================================================="
-success "FastAPI is up and running!"
-success "Access FastAPI at: http://$SERVER_IP:5000/docs"
-echo "================================================="
 # Start Streamlit chatbot
 info "Starting Streamlit chatbot..."
 streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &
 CHATBOT_PID=$!
-echo "================================================="
-success "Streamlit chatbot started with PID $CHATBOT_PID. Logs: $LOGS_DIR/streamlit.log"
-success "Access Streamlit at: http://$SERVER_IP:8502"
-echo "================================================="
+success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
-# Wait for processes to complete
+# Wait for processes
 wait $CHROMA_PID $BACKEND_PID $CHATBOT_PID
 
