@@ -5,7 +5,7 @@ __pycache__/
 chromadb/
 # C extensions
 *.so
-
+chat_logs/
 # Distribution / packaging
 .Python
 build/
