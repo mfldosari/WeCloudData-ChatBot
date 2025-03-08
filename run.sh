@@ -51,17 +51,17 @@ fi
 
 # Start ChromaDB
 info "Starting ChromaDB..."
-chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &
+chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &  # Run in background
 CHROMA_PID=$!
 success "ChromaDB started with PID $CHROMA_PID."
 
 # Start FastAPI backend
 info "Starting FastAPI backend..."
-uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &
+uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &  # Run in background
 BACKEND_PID=$!
 success "FastAPI backend started with PID $BACKEND_PID."
 
-# Wait for FastAPI to be ready
+# Wait for FastAPI to be ready (optional, can be skipped if you don't need to check status)
 info "Waiting for FastAPI to start..."
 TIMEOUT=60
 SECONDS_WAITED=0
@@ -77,10 +77,9 @@ success "FastAPI is running at: http://$SERVER_IP:5000/docs"
 
 # Start Streamlit chatbot
 info "Starting Streamlit chatbot..."
-streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &
+streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &  # Run in background
 CHATBOT_PID=$!
 success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
-# Wait for processes
-wait $CHROMA_PID $BACKEND_PID $CHATBOT_PID
-
+# No need to wait for processes anymore as they are running in the background
+success "All services are running in the background."
