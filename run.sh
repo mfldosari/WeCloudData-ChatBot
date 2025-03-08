@@ -83,3 +83,4 @@ success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
 # No need to wait for processes anymore as they are running in the background
 success "All services are running in the background."
+
