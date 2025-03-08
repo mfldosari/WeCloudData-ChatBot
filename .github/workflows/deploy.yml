@@ -23,4 +23,4 @@ jobs:
       # Step 3: Run the custom deployment script on VM
       - name: Run the custom deployment script
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} 'bash -s' < ./WeCloudData-ChatBot/run.sh
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} 'bash -s' < ./run.sh
