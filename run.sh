@@ -13,7 +13,6 @@ else
     exit 1
 fi
 
-
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
@@ -37,7 +36,7 @@ uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 & 
 BACKEND_PID=$!
 success "FastAPI backend started with PID $BACKEND_PID."
 
-# Wait for FastAPI to be ready (optional, can be skipped if you don't need to check status)
+# Wait for FastAPI to be ready
 info "Waiting for FastAPI to start..."
 TIMEOUT=60
 SECONDS_WAITED=0
@@ -57,7 +56,5 @@ streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 >
 CHATBOT_PID=$!
 success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
-# No need to wait for processes anymore as they are running in the background
-success "All services are running in the background."
-
-wait
+# Prevent the script from exiting
+tail -f /dev/null
