@@ -38,11 +38,8 @@ jobs:
             # Pull latest changes using SSH
             git pull origin main
 
-            # Ensure virtual environment exists
-            if [ ! -d "venv" ]; then
-                python3 -m venv venv
-            fi
-            source venv/bin/activate
+            # Activate the existing virtual environment
+            source /home/azureuser/env/bin/activate
 
             # Install dependencies safely
             pip install --upgrade pip
