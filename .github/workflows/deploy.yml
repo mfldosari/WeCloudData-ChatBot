@@ -25,8 +25,8 @@ jobs:
         run: |
           git config --global credential.helper store
           echo "https://${{ secrets.G_USERNAME }}:${{ secrets.G_TOKEN }}@github.com" > ~/.git-credentials
-          git config --global user.email "your-email@example.com"
-          git config --global user.name "your-github-username"
+          git config --global user.email "aldosari.mkj@gmail.com"
+          git config --global user.name "mfaldosari"
           
       # Step 4: Run the custom deployment script on VM
       - name: Run the custom deployment script
@@ -42,7 +42,7 @@ jobs:
             cd /home/azureuser/WeCloudData-ChatBot  # Adjust this path if necessary
 
             # Step 4: Pull the latest changes from GitHub using Git credentials
-            git pull https://${{ secrets.GITHUB_USERNAME }}:${{ secrets.GITHUB_TOKEN }}@github.com/mfldosari/WeCloudData-ChatBot.git
+            git pull https://${{ secrets.G_USERNAME }}:${{ secrets.G_TOKEN }}@github.com/mfldosari/WeCloudData-ChatBot.git
 
             # Step 5: Install dependencies (if needed)
             pip install -r requirements.txt
