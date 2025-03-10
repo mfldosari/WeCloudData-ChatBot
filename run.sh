@@ -13,14 +13,6 @@ else
     exit 1
 fi
 
-# Ensure that GitHub username and PAT are set in the .env file
-if [ -z "$GITHUB_USERNAME" ] || [ -z "$GITHUB_PAT" ]; then
-    error "GitHub username or PAT is missing in .env file!"
-    exit 1
-fi
-
-# Set variables
-REPO_URL="https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/mfldosari/WeCloudData-ChatBot.git"
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
@@ -31,23 +23,6 @@ SERVER_IP=$(hostname -I | awk '{print $1}')
 # Ensure logs directory exists
 mkdir -p "$LOGS_DIR"
 info "Logs will be stored in: $LOGS_DIR"
-
-# Pull latest code from GitHub
-info "Updating repository from GitHub..."
-if [ ! -d ".git" ]; then
-    error "This is not a Git repository. Cloning..."
-    git clone $REPO_URL $CURRENT_DIR
-else
-    git pull origin main
-fi
-success "Repository updated successfully."
-
-# Install dependencies
-info "Installing dependencies..."
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
-    success "Python dependencies installed."
-fi
 
 # Start ChromaDB
 info "Starting ChromaDB..."
@@ -61,7 +36,7 @@ uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 & 
 BACKEND_PID=$!
 success "FastAPI backend started with PID $BACKEND_PID."
 
-# Wait for FastAPI to be ready (optional, can be skipped if you don't need to check status)
+# Wait for FastAPI to be ready
 info "Waiting for FastAPI to start..."
 TIMEOUT=60
 SECONDS_WAITED=0
@@ -81,6 +56,5 @@ streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 >
 CHATBOT_PID=$!
 success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
-# No need to wait for processes anymore as they are running in the background
-success "All services are running in the background."
-
+# Prevent the script from exiting
+tail -f /dev/null
