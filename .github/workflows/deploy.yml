@@ -20,31 +20,40 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Step 3: Run the custom deployment script on VM
-      - name: Run the custom deployment script
+      # Step 3: Deploy to VM
+      - name: Run deployment script on VM
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
+            # Stop the running service
             sudo systemctl stop all-services.service
-            # Step 1: Activate the environment
-            source /home/azureuser/env/bin/activate 
 
-            # Step 2: Stop running processes (Chroma, Uvicorn, Streamlit)
+            # Kill any remaining processes (safe method)
             pkill -f "chroma" || true
             pkill -f "uvicorn" || true
             pkill -f "streamlit" || true
 
-            # Step 3: Navigate to the repository directory
-            cd /home/azureuser/WeCloudData-ChatBot  # Adjust this path if necessary
+            # Navigate to project directory
+            cd /home/azureuser/WeCloudData-ChatBot
 
-            # Step 4: Pull the latest changes from GitHub
+            # Ensure SSH authentication for Git
+            eval "$(ssh-agent -s)"
+            ssh-add ~/.ssh/id_rsa
+
+            # Pull latest changes from GitHub using SSH
             git pull origin main
 
-            # Step 5: Install dependencies (if needed)
+            # Ensure virtual environment exists and activate it
+            if [ ! -d "venv" ]; then
+                python3 -m venv venv
+            fi
+            source venv/bin/activate
+
+            # Install dependencies
+            pip install --upgrade pip
             pip install -r requirements.txt
 
-            # Step 6: Restart the service (if needed)
+            # Restart the service
             sudo systemctl restart all-services.service
-
-            # Optional: Uncomment below if you want to run the script directly
-            # bash ./run.sh
+            sleep 5
+            sudo systemctl status all-services.service --no-pager
           EOF
