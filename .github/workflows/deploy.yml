@@ -26,7 +26,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
             # Step 1: Activate the environment 
             source env/bin/activate  # Adjust the path to your virtual environment
-
+            killall chroma uvicorn streamlit
             # Step 2: Navigate to the repository directory
             cd WeCloudData-ChatBot  
 
