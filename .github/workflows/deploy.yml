@@ -24,6 +24,7 @@ jobs:
       - name: Run the custom deployment script
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
+            sudo systemctl stop all-services.service
             # Step 1: Activate the environment
             source env/bin/activate 
 
