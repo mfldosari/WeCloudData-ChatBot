@@ -3,31 +3,27 @@ name: Deploy to VM
 on:
   push:
     branches:
-      - main  # Trigger deployment on changes to the main branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout the repository
         uses: actions/checkout@v2
 
-      # Step 2: Set up SSH key for VM connection
       - name: Set up SSH key
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Step 3: Deploy to VM
-      - name: Run deployment script on VM
+      - name: Deploy to VM
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
-            # Stop the running service
             sudo systemctl stop all-services.service
-            apt install python3.12-venv
-            # Kill any remaining processes (safe method)
+
+            # Kill running processes safely
             pkill -f "chroma" || true
             pkill -f "uvicorn" || true
             pkill -f "streamlit" || true
@@ -35,20 +31,20 @@ jobs:
             # Navigate to project directory
             cd /home/azureuser/WeCloudData-ChatBot
 
-            # Ensure SSH authentication for Git
+            # Ensure SSH authentication for GitHub
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_rsa
 
-            # Pull latest changes from GitHub using SSH
+            # Pull latest changes using SSH
             git pull origin main
 
-            # Ensure virtual environment exists and activate it
+            # Ensure virtual environment exists
             if [ ! -d "venv" ]; then
                 python3 -m venv venv
             fi
             source venv/bin/activate
 
-            # Install dependencies
+            # Install dependencies safely
             pip install --upgrade pip
             pip install -r requirements.txt
 
