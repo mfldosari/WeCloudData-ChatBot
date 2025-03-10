@@ -36,7 +36,7 @@ def avatar_updater(role):
         return path_bot
     else:
         return path_user
-st.toast("last test for configmation")
+
 # ------------------------------
 # Chat Management Functions (from Code 2)
 # ------------------------------
