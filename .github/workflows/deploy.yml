@@ -24,13 +24,24 @@ jobs:
       - name: Run the custom deployment script
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
-            # Step 1: Activate the environment 
-            source env/bin/activate  # Adjust the path to your virtual environment
-            killall chroma uvicorn streamlit
-            # Step 2: Navigate to the repository directory
-            cd WeCloudData-ChatBot  
+            # Step 1: Activate the environment
+            source env/bin/activate 
 
-            # Step 3: Run the custom script
+            # Step 2: Stop running processes (Chroma, Uvicorn, Streamlit)
+            killall chroma uvicorn streamlit
+
+            # Step 3: Navigate to the repository directory
+            cd /home/azureuser/WeCloudData-ChatBot  # Adjust this path if necessary
+
+            # Step 4: Pull the latest changes from GitHub
+            git pull origin main
+
+            # Step 5: Install dependencies (if needed)
+            pip install -r requirements.txt
+
+            # Step 6: Restart the service (if needed)
             sudo systemctl restart all-services.service
-            #bash ./run.sh
+
+            # Optional: Uncomment below if you want to run the script directly
+            # bash ./run.sh
           EOF
