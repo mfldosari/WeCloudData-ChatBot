@@ -26,17 +26,18 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP_ADDRESS }} << 'EOF'
             sudo systemctl stop all-services.service
             # Step 1: Activate the environment
-            source env/bin/activate 
+            source /home/azureuser/env/bin/activate 
 
             # Step 2: Stop running processes (Chroma, Uvicorn, Streamlit)
-            killall chroma uvicorn streamlit
+            pkill -f "chroma" || true
+            pkill -f "uvicorn" || true
+            pkill -f "streamlit" || true
 
             # Step 3: Navigate to the repository directory
             cd /home/azureuser/WeCloudData-ChatBot  # Adjust this path if necessary
 
             # Step 4: Pull the latest changes from GitHub
             git pull origin main
-
 
             # Step 5: Install dependencies (if needed)
             pip install -r requirements.txt
