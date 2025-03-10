@@ -36,7 +36,7 @@ def avatar_updater(role):
         return path_bot
     else:
         return path_user
-st.toast("hello it works")
+st.toast("hello it works again")
 # ------------------------------
 # Chat Management Functions (from Code 2)
 # ------------------------------
