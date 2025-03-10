@@ -35,10 +35,8 @@ jobs:
             cd /home/azureuser/WeCloudData-ChatBot  # Adjust this path if necessary
 
             # Step 4: Pull the latest changes from GitHub
-            export G_TOKEN=${{ secrets.G_TOKEN }}
+            git pull origin main
 
-            # Step 5: Pull the latest changes from GitHub with token authentication
-            git pull https://${{ secrets.G_USERNAME }}:${{ secrets.GITHUB_TOKEN }}@github.com/mfldosari/WeCloudData-ChatBot.git
 
             # Step 5: Install dependencies (if needed)
             pip install -r requirements.txt
