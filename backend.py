@@ -1,252 +1,336 @@
-import os
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from pydantic import BaseModel
+from openai import OpenAI
+from fastapi.responses import StreamingResponse
+from dotenv import load_dotenv
 import json
 import psycopg2
-from typing import List, Dict, Any
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
-from pydantic import BaseModel
-from azure.storage.blob import BlobServiceClient
-from langchain_openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from langchain.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+import os
+import uuid
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
+from typing import List, Optional
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_chroma import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.messages import HumanMessage, AIMessage
+from azure.storage.blob import BlobClient
+import chromadb
 
-# Load environment variables from a .env file
 load_dotenv()
 
-# Initialize FastAPI app
+DB_CONFIG = {
+    "dbname": os.environ.get("DB_NAME"),
+    "user": os.environ.get("DB_USER"),
+    "password": os.environ.get("DB_PASSWORD"),
+    "host": os.environ.get("DB_HOST"),
+    "port": os.environ.get("DB_PORT"),
+}
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+model = "gpt-3.5-turbo"
+
+# VECTOR_DB_DIR = "chromadb"
+# os.makedirs(VECTOR_DB_DIR, exist_ok=True)
+
+llm = ChatOpenAI(model=model)
+
+# LangChain setup
+embedding_function = OpenAIEmbeddings()
+chroma_client = chromadb.HttpClient(host=os.environ.get("CHROMADB_HOST"), port=os.environ.get("CHROMADB_PORT"))
+collection = chroma_client.get_or_create_collection("langchain")
+vectorstore = Chroma(
+            client=chroma_client,
+            collection_name="langchain",
+            embedding_function=embedding_function,
+)
+
+storage_account_sas_url = os.environ.get("AZURE_STORAGE_SAS_URL")
+storage_container_name = os.environ.get("AZURE_STORAGE_CONTAINER")
+storage_resource_uri = storage_account_sas_url.split('?')[0]
+token = storage_account_sas_url.split('?')[1]
+
 app = FastAPI()
 
-# Azure Blob Storage setup
-connect_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-container_client = blob_service_client.get_container_client("chatbot-storage")
+# Request models
+class ChatRequest(BaseModel):
+    messages: List[dict]
 
-# OpenAI and LangChain setup
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-vector_store = Chroma(embedding_function=embeddings, persist_directory="./chroma_db")
-llm = ChatOpenAI(model_name="gpt-4o-mini", openai_api_key=OPENAI_API_KEY)
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+class SaveChatRequest(BaseModel):
+    chat_id: str
+    chat_name: str
+    messages: List[dict]
+    pdf_name: Optional[str] = None
+    pdf_path: Optional[str] = None
+    pdf_uuid: Optional[str] = None
 
-# Database connection dependency
+class DeleteChatRequest(BaseModel):
+    chat_id: str
+
+class RAGChatRequest(BaseModel):
+    messages: List[dict]
+    pdf_uuid: str
+
+# Dependency to manage database connection
 def get_db():
-    conn = psycopg2.connect(
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT")
-    )
+    conn = psycopg2.connect(**DB_CONFIG)
     try:
         yield conn
     finally:
         conn.close()
 
-# Pydantic models for request/response validation
-class Message(BaseModel):
-    role: str
-    content: str
-
-class ChatRequest(BaseModel):
-    messages: List[Message]
-
-class ChatResponse(BaseModel):
-    response: str
-
-class RAGChatRequest(BaseModel):
-    question: str
-    chat_history: List[Message]
-
-class SaveChatRequest(BaseModel):
-    chat_id: str
-    chat_name: str
-    messages: List[Message]
-    pdf_name: str = None
-    pdf_path: str = None
-    pdf_uuid: str = None
-
-class DeleteChatRequest(BaseModel):
-    chat_id: str
-
-# FastAPI Endpoints
-
-## Basic Chat Endpoint
-@app.post("/chat/", response_model=ChatResponse)
+@app.post("/chat/")
 async def chat(request: ChatRequest):
-    """Handle a simple chat request using the LLM."""
-    messages = [{"role": m.role, "content": m.content} for m in request.messages]
-    response = llm.invoke(messages)
-    return {"response": response.content}
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=request.messages,
+            stream=True,
+        )
 
-## Load All Chats
+        # if you don't want to stream the output
+        # set the stream parameter to False in above function
+        # and uncommnet the belowing line
+        # return {"reply": response.choices[0].message.content}
+
+        # Function to send out the stream data
+        def stream_response():
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+
+        # Use StreamingResponse to return
+        return StreamingResponse(stream_response(), media_type="text/plain")
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/load_chat/")
 async def load_chat(db: psycopg2.extensions.connection = Depends(get_db)):
-    """Load all chat records from the database and Azure Blob Storage."""
-    with db.cursor(cursor_factory=RealDictCursor) as cursor:
-        cursor.execute("SELECT id, name, file_path, pdf_name, pdf_path, pdf_uuid FROM advanced_chats ORDER BY last_update DESC")
-        rows = cursor.fetchall()
+    try:
+        with db.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT id, name, file_path, pdf_name, pdf_path, pdf_uuid FROM advanced_chats ORDER BY last_update DESC")
+            rows = cursor.fetchall()
 
-    records = []
-    for row in rows:
-        chat_id = row["id"]
-        name = row["name"]
-        chat_blob_name = row["file_path"]
-        pdf_name = row["pdf_name"]
-        pdf_blob_name = row["pdf_path"]
-        pdf_uuid = row["pdf_uuid"]
+        records = []
+        for row in rows:
+            chat_id, name, file_path, pdf_name, pdf_path, pdf_uuid= row["id"], row["name"], row["file_path"], row["pdf_name"], row["pdf_path"], row["pdf_uuid"]
 
-        try:
-            # Handle legacy local file paths
-            if not chat_blob_name.startswith("chats/"):
-                new_chat_blob_name = f"chats/{chat_id}.json"
-                local_file_path = chat_blob_name
-                if os.path.exists(local_file_path):
-                    with open(local_file_path, "rb") as f:
-                        blob_client = container_client.get_blob_client(new_chat_blob_name)
-                        blob_client.upload_blob(f, overwrite=True)
-                    with db.cursor() as cursor:
-                        cursor.execute("UPDATE advanced_chats SET file_path = %s WHERE id = %s", (new_chat_blob_name, chat_id))
-                    db.commit()
-                    chat_blob_name = new_chat_blob_name
-                else:
-                    messages = []
-            else:
-                blob_client = container_client.get_blob_client(chat_blob_name)
-                if blob_client.exists():
-                    download_stream = blob_client.download_blob()
-                    messages = json.loads(download_stream.readall())
-                else:
-                    messages = []
-        except Exception as e:
-            print(f"Error loading chat {chat_id}: {str(e)}")
-            messages = []
+            blob_sas_url = f"{storage_resource_uri}/{storage_container_name}/{file_path}?{token}"
+            blob_client = BlobClient.from_blob_url(blob_sas_url)
 
-        records.append({
-            "id": chat_id,
-            "chat_name": name,
-            "messages": messages,
-            "pdf_name": pdf_name,
-            "pdf_path": pdf_blob_name,
-            "pdf_uuid": pdf_uuid
-        })
+            if blob_client.exists():
+                blob_data = blob_client.download_blob().readall()
+                messages = json.loads(blob_data)
+                records.append({"id": chat_id, "chat_name": name, "messages": messages, "pdf_name":pdf_name, "pdf_path":pdf_path, "pdf_uuid":pdf_uuid})
+            # if os.path.exists(file_path):
+            #     with open(file_path, "r", encoding="utf-8") as f:
+            #         messages = json.load(f)
+            #     records.append({"id": chat_id, "chat_name": name, "messages": messages, "pdf_name":pdf_name, "pdf_path":pdf_path, "pdf_uuid":pdf_uuid})
 
-    return records
+        return records
 
-## Save a Chat
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 @app.post("/save_chat/")
 async def save_chat(request: SaveChatRequest, db: psycopg2.extensions.connection = Depends(get_db)):
-    """Save a chat to Azure Blob Storage and update the database."""
-    chat_id = request.chat_id
-    chat_name = request.chat_name
-    messages = [{"role": m.role, "content": m.content} for m in request.messages]
-    pdf_name = request.pdf_name
-    pdf_path = request.pdf_path
-    pdf_uuid = request.pdf_uuid
-
-    chat_blob_name = f"chats/{chat_id}.json"
-    blob_client = container_client.get_blob_client(chat_blob_name)
-    blob_client.upload_blob(json.dumps(messages), overwrite=True)
-
     try:
+        file_path = f"chat_logs/{request.chat_id}.json"
+        # os.makedirs("chat_logs", exist_ok=True)
+        
+        # Save messages to file
+        # with open(file_path, "w", encoding="utf-8") as f:
+        #     json.dump(request.messages, f, ensure_ascii=False, indent=4)
+
+        blob_sas_url = f"{storage_resource_uri}/{storage_container_name}/{file_path}?{token}"
+        blob_client = BlobClient.from_blob_url(blob_sas_url)
+        messages_data = json.dumps(request.messages, ensure_ascii=False, indent=4)
+        blob_client.upload_blob(messages_data, overwrite=True)
+        
+        # Insert or update database record
         with db.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO advanced_chats (id, name, file_path, pdf_name, pdf_path, pdf_uuid)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE
-                SET name = %s, file_path = %s, pdf_name = %s, pdf_path = %s, pdf_uuid = %s, last_update = CURRENT_TIMESTAMP
-            """, (chat_id, chat_name, chat_blob_name, pdf_name, pdf_path, pdf_uuid,
-                  chat_name, chat_blob_name, pdf_name, pdf_path, pdf_uuid))
+            cursor.execute(
+                """
+                INSERT INTO advanced_chats (id, name, file_path, last_update, pdf_path, pdf_name, pdf_uuid)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s)
+                ON CONFLICT (id)
+                DO UPDATE SET name = EXCLUDED.name, file_path = EXCLUDED.file_path, last_update = CURRENT_TIMESTAMP, pdf_path = EXCLUDED.pdf_path, pdf_name = EXCLUDED.pdf_name, pdf_uuid = EXCLUDED.pdf_uuid
+                """,
+                (request.chat_id, request.chat_name, file_path, request.pdf_path, request.pdf_name, request.pdf_uuid),
+            )
         db.commit()
-        return {"status": "success"}
+        return {"message": "Chat saved successfully"}
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error saving chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 
 @app.post("/delete_chat/")
 async def delete_chat(request: DeleteChatRequest, db: psycopg2.extensions.connection = Depends(get_db)):
-    """Delete a chat, its history blob, and associated PDF blob from Azure Blob Storage and the database."""
-    chat_id = request.chat_id
     try:
-        # Step 1: Fetch chat and PDF blob names from the database
-        with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
-            cursor.execute("SELECT file_path, pdf_path FROM advanced_chats WHERE id = %s", (chat_id,))
-            row = cursor.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Chat not found")
-            chat_blob_name = row["file_path"]  # Chat history blob name
-            pdf_blob_name = row["pdf_path"]    # PDF blob name
-
-        # Step 2: Delete the chat history blob
-        if chat_blob_name:
-            chat_blob_client = container_client.get_blob_client(chat_blob_name)
-            if chat_blob_client.exists():
-                chat_blob_client.delete_blob()
-                print(f"Chat blob {chat_blob_name} deleted successfully.")
-            else:
-                print(f"Chat blob {chat_blob_name} does not exist.")
-
-        # Step 3: Delete the PDF blob
-        if pdf_blob_name:
-            pdf_blob_client = container_client.get_blob_client(pdf_blob_name)
-            if pdf_blob_client.exists():
-                pdf_blob_client.delete_blob()
-                print(f"PDF blob {pdf_blob_name} deleted successfully.")
-            else:
-                print(f"PDF blob {pdf_blob_name} does not exist in Azure Blob Storage.")
-        else:
-            print("No PDF blob name found for this chat in the database.")
-
-        # Step 4: Delete the database record
+        # Retrieve the file path before deleting the record
+        file_path = None
         with db.cursor() as cursor:
-            cursor.execute("DELETE FROM advanced_chats WHERE id = %s", (chat_id,))
+            cursor.execute("SELECT file_path, pdf_path FROM advanced_chats WHERE id = %s", (request.chat_id,))
+            result = cursor.fetchone()
+            if result:
+                file_path = result[0]
+                pdf_path = result[1]
+            else:
+                raise HTTPException(status_code=404, detail="Chat not found")
+
+        # Delete the record from the database
+        with db.cursor() as cursor:
+            cursor.execute("DELETE FROM advanced_chats WHERE id = %s", (request.chat_id,))
         db.commit()
 
-        return {"status": "success"}
+        # Delete the associated file, if it exists
+        # if file_path and os.path.exists(file_path):
+        #     os.remove(file_path)
+        
+        if file_path:
+            blob_sas_url = f"{storage_resource_uri}/{storage_container_name}/{file_path}?{token}"
+            blob_client = BlobClient.from_blob_url(blob_sas_url)
+            if blob_client.exists():
+                blob_client.delete_blob()
 
-    except HTTPException as he:
-        raise he
+        if pdf_path:
+            blob_sas_url = f"{storage_resource_uri}/{storage_container_name}/{pdf_path}?{token}"
+            blob_client = BlobClient.from_blob_url(blob_sas_url)
+            if blob_client.exists():
+                blob_client.delete_blob()
+
+        return {"message": "Chat deleted successfully"}
+
+    except HTTPException:
+        # Reraise known exceptions
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    
 
-## RAG Chat Endpoint
-@app.post("/rag_chat/", response_model=ChatResponse)
+@app.post("/upload_pdf/")
+async def upload_pdf(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+
+    try:
+        pdf_uuid = str(uuid.uuid4())
+        file_path = f"pdf_store/{pdf_uuid}_{file.filename}"
+        os.makedirs("pdf_store", exist_ok=True)
+
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+        blob_sas_url = f"{storage_resource_uri}/{storage_container_name}/{file_path}?{token}"
+        blob_client = BlobClient.from_blob_url(blob_sas_url)
+        blob_client.upload_blob(file_path, overwrite=True)
+
+        # Load and process PDF
+        loader = PyPDFLoader(file_path)
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        texts = text_splitter.split_documents(documents)
+
+        # Add to ChromaDB
+        vectorstore.add_texts(
+            [doc.page_content for doc in texts], 
+            ids=[str(uuid.uuid4()) for _ in texts],
+            metadatas=[{"pdf_uuid": pdf_uuid} for _ in texts]    
+        )
+
+        os.remove(file_path)
+
+        return {"message": "File uploaded successfully", "pdf_path": file_path, "pdf_uuid":pdf_uuid}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@app.post("/rag_chat/")
 async def rag_chat(request: RAGChatRequest):
-    """Handle a RAG-based chat request using retrieved context and chat history."""
-    question = request.question
-    chat_history = [{"role": m.role, "content": m.content} for m in request.chat_history]
 
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
-    template = """Use the following pieces of context to answer the question. If you don't know the answer, just say that you don't know. Don't try to make up an answer.
-
-    Context: {context}
-
-    Chat History: {chat_history}
-
-    Question: {question}
-
-    Answer:"""
-    prompt = ChatPromptTemplate.from_template(template)
-
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
-
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough(), "chat_history": lambda x: json.dumps(chat_history)}
-        | prompt
-        | llm
-        | StrOutputParser()
+    retriever = vectorstore.as_retriever(
+            search_kwargs={"k": 5, "filter": {"pdf_uuid": request.pdf_uuid}}
+        )
+    
+    ### Contextualize question ###
+    contextualize_q_system_prompt = (
+        "Given a chat history and the latest user question "
+        "which might reference context in the chat history, "
+        "formulate a standalone question which can be understood "
+        "without the chat history. Do NOT answer the question, "
+        "just reformulate it if needed and otherwise return it as is."
+    )
+    contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    history_aware_retriever = create_history_aware_retriever(
+        llm, retriever, contextualize_q_prompt
     )
 
-    response = rag_chain.invoke(question)
-    return {"response": response}
 
-# Run the FastAPI app
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    ### Answer question ###
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer "
+        "the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the "
+        "answer concise."
+        "\n\n"
+        "{context}"
+    )
+    qa_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+
+    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+
+    chat_history = []
+
+    user_input = request.messages[-1]
+    previous_chat = request.messages[:-1]
+
+    for message in request.messages:
+        if message["role"] == "user":
+            chat_history.append(HumanMessage(content=message["content"]))
+        if message["role"] == "assistant":
+            chat_history.append(AIMessage(content=message["content"]))
+    
+    # response = rag_chain.invoke({
+    #     "chat_history":chat_history,
+    #     "input":user_input
+    # })
+
+    chain = rag_chain.pick("answer")
+
+    stream = chain.stream({
+        "chat_history":chat_history,
+        "input":user_input
+    })
+
+    def stream_response():
+            for chunk in stream:
+                yield chunk
+
+    # Use StreamingResponse to return
+    return StreamingResponse(stream_response(), media_type="text/plain")
+
+
