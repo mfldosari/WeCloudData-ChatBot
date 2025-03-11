@@ -13,6 +13,7 @@ else
     exit 1
 fi
 source /home/azureuser/env/bin/activate
+
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
