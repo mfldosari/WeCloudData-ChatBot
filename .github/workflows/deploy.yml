@@ -43,4 +43,4 @@ jobs:
           --name CustomScript \
           --force-update \
           --publisher Microsoft.Azure.Extensions \
-          --settings '{"commandToExecute": "${{ secrets.PATHSCRIPT }}"}'
+          --settings '{"commandToExecute": "${{ secrets.PATH_SCRIPT }}"}'
