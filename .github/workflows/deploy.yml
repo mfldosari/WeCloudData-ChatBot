@@ -43,4 +43,4 @@ jobs:
           --name CustomScript \
           --force-update \
           --publisher Microsoft.Azure.Extensions \
-          --settings '{"commandToExecute": "/home/azureuser/WeCloudData-ChatBot/update.sh"}'
+          --settings '{"commandToExecute": "${{ secrets.PATHSCRIPT }}"}'
