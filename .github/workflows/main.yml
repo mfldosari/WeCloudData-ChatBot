@@ -75,10 +75,13 @@ jobs:
       - test-database-connection-API
       - build-and-test
     steps:
-      - name: Checkout code
+      - name: Checkout code with full history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full commit history
 
       - name: Revert Last Commit
         run: |
           git reset --hard HEAD~1
           git push --force
+
