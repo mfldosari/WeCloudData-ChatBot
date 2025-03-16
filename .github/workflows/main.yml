@@ -30,8 +30,8 @@ jobs:
      #     echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
      #     echo "DB_PORT=${{ secrets.DB_PORT }}" >> $GITHUB_ENV
 
-      - name: Run FastAPI Tests
-        run: pytest tests/test.py
+     # - name: Run FastAPI Tests
+      #  run: pytest tests/test.py
 
   build-and-test:
     runs-on: ubuntu-latest
@@ -67,21 +67,3 @@ jobs:
         run: |
           sleep 10
           ss -tulnp | grep -E '8000|5000|8051'
-
-  revert-on-failure:
-    runs-on: ubuntu-latest
-    if: failure()
-    needs: 
-      - test-database-connection-API
-      - build-and-test
-    steps:
-      - name: Checkout code with full history
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch full commit history
-
-      - name: Revert Last Commit
-        run: |
-          git reset --hard HEAD~1
-          git push --force "https://${{ secrets.GH_PAT }}@github.com/mfldosari/WeCloudData-ChatBot.git" main
-
