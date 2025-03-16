@@ -17,9 +17,7 @@ source /home/azureuser/env/bin/activate
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
 CHROMA_DB_PATH="$CURRENT_DIR/chromadb"
-CHATBOT_SCRIPT="$CURRENT_DIR/chatbot.py"
 BACKEND_SCRIPT="$CURRENT_DIR/backend.py"
-SERVER_IP=$(hostname -I | awk '{print $1}')
 
 # Ensure logs directory exists
 mkdir -p "$LOGS_DIR"
@@ -50,12 +48,6 @@ while ! nc -z 127.0.0.1 5000; do
   fi
 done
 success "FastAPI is running at: http://$SERVER_IP:5000/docs"
-
-# Start Streamlit chatbot
-info "Starting Streamlit chatbot..."
-streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &  # Run in background
-CHATBOT_PID=$!
-success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
 # Prevent the script from exiting
 tail -f /dev/null
