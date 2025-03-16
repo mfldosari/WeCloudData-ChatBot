@@ -7,9 +7,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-database-connection-API:
+    runs-on: ubuntu-latest
+    name: Database and API Testing Unit 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up environment variables
+        run: |
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
+          echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> $GITHUB_ENV
+
+      - name: Run FastAPI Tests
+        run: pytest tests/test.py
+        
   build-and-test:
     runs-on: ubuntu-latest
-
+    name: Frontend and Backend Testing Unit 
+    needs: test-database-connection-API
     steps:
       # Checkout the repository
       - name: Checkout code
