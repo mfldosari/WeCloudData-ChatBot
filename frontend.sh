@@ -18,7 +18,7 @@ info "Logs will be stored in: $LOGS_DIR"
 
 # Start Streamlit chatbot
 info "Starting Streamlit chatbot..."
-streamlit run "$CHATBOT_SCRIPT" --server.address $SERVER_IP --server.port 8502 > "$LOGS_DIR/streamlit.log" 2>&1 &  # Run in background
+streamlit run "$CHATBOT_SCRIPT" --server.port 8501 > "$LOGS_DIR/streamlit.log" 2>&1 &  # Run in background
 CHATBOT_PID=$!
 success "Streamlit chatbot started at: http://$SERVER_IP:8502"
 
