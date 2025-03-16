@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Color functions
@@ -12,7 +13,7 @@ else
     error ".env file not found!"
     exit 1
 fi
-source /home/azureuser/env/bin/activate
+source /home/whitehat/SDA/env/bin/activate
 
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
@@ -51,3 +52,4 @@ success "FastAPI is running at: http://$SERVER_IP:5000/docs"
 
 # Prevent the script from exiting
 tail -f /dev/null
+
