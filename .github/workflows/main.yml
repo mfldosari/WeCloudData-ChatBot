@@ -79,9 +79,9 @@ jobs:
 
       - name: Start services
         run: |
-          nohup chroma run --path chromadb --host 0.0.0.0 --port 8000 > chroma.log 2>&1 &
-          nohup uvicorn backend:app --host 0.0.0.0 --port 5000 --reload > uvicorn.log 2>&1 &
-          nohup streamlit run chatbot.py --server.port=8051 --server.headless true > streamlit.log 2>&1 &
+          chroma run --path chromadb --host 0.0.0.0 --port 8000 > chroma.log 2>&1 &
+          uvicorn backend:app --host 0.0.0.0 --port 5000 --reload > uvicorn.log 2>&1 &
+          streamlit run chatbot.py --server.port=8051 --server.headless true > streamlit.log 2>&1 &
 
       - name: Check if services are running
         run: |
