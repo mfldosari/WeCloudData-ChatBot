@@ -85,7 +85,7 @@ jobs:
       - name: Check if services are running
         run: |
           sleep 10
-          ss -tulnp | grep -E '8000|5000|8051' || true
+          ss -tulnp | grep -E '8000|5000|8051' 
       - name: Revert changes on failure
         if: failure()
         run: |
