@@ -4,88 +4,24 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  test-database-connection-API:
+  deploy:
     runs-on: ubuntu-latest
-    name: Database and API Testing Unit
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # Azure Login using GitHub Secrets
+    - name: Azure Login
+      uses: azure/login@v2.2.0
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Cache pip dependencies
-        id: cache-pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      - name: Install dependencies
-        if: steps.cache-pip.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
-
-      - name: Check pip cache hit
-        if: steps.cache-pip.outputs.cache-hit == 'true'
-        run: echo "Pip cache hit! Dependencies were restored from cache."
-
-      # - name: Set up environment variables
-      #   run: |
-      #     echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
-      #     echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
-      #     echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-      #     echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
-      #     echo "DB_PORT=${{ secrets.DB_PORT }}" >> $GITHUB_ENV
-
-      # - name: Run FastAPI Tests
-      #   run: pytest tests/test.py
-
-  build-and-test:
-    runs-on: ubuntu-latest
-    name: Frontend and Backend Testing Unit
-    needs: test-database-connection-API
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Cache pip dependencies
-        id: cache-pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      - name: Install dependencies
-        if: steps.cache-pip.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
-
-      - name: Check pip cache hit
-        if: steps.cache-pip.outputs.cache-hit == 'true'
-        run: echo "Pip cache hit! Dependencies were restored from cache."
-
-      # Start ChromaDB, FastAPI (Uvicorn), and Streamlit
-      - name: Start services
-        run: |
-          nohup chroma run --path chromadb --host 0.0.0.0 --port 8000 > chroma.log 2>&1 &
-          nohup uvicorn backend:app --host 0.0.0.0 --port 5000 --reload > uvicorn.log 2>&1 &
-          nohup streamlit run chatbot.py --server.port=8051 --server.headless true > streamlit.log 2>&1 &
-      # Wait for services to start
-      - name: Check if services are running
-        run: |
-          sleep 10  # Give processes time to start
-          ss -tulnp | grep -E '8000|5000|8051'
-
+    # Execute the Update Script on the VM
+    - name: Deploy to Azure VM
+      run: |
+        az vm extension set \
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --vm-name ${{ secrets.VM_NAME }} \
+          --name CustomScript \
+          --force-update \
+          --publisher Microsoft.Azure.Extensions \
+          --settings '{"commandToExecute": "/home/azureuser/WeCloudData-ChatBot/update.sh"}'
