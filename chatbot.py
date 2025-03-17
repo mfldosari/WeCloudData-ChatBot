@@ -172,6 +172,7 @@ with st.sidebar:
 # ------------------------------
 # Main Content: Chat Interface with Avatars
 # ------------------------------
+st.toast("testing...")
 st.header("Chatbot Application")
 if st.session_state["current_chat"]:
     chat_id = st.session_state["current_chat"]
