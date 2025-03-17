@@ -86,3 +86,13 @@ jobs:
         run: |
           sleep 10
           ss -tulnp | grep -E '8000|5000|8051' || true
+      - name: Revert changes on failure
+        if: failure()
+        run: |
+          echo "Workflow failed. Reverting the latest commit."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Revert the latest commit (HEAD)
+          git revert HEAD --no-edit
+          # Push the revert commit to main
+          git push origin main
