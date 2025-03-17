@@ -4,7 +4,7 @@
 info() { echo -e "\033[34m$1\033[0m"; }  # Blue
 success() { echo -e "\033[32m$1\033[0m"; }  # Green
  
-source /home/whitehat/SDA/env/bin/activate
+source /home/azureuser/env/bin/activate
  
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"

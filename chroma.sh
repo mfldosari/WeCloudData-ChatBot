@@ -13,7 +13,7 @@ else
     error ".env file not found!"
     exit 1
 fi
-source /home/whitehat/SDA/env/bin/activate
+source /home/azureuser/env/bin/activate
 
 CURRENT_DIR=$(pwd)
 LOGS_DIR="$CURRENT_DIR/logs"
@@ -29,26 +29,6 @@ info "Starting ChromaDB..."
 chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &  # Run in background
 CHROMA_PID=$!
 success "ChromaDB started with PID $CHROMA_PID."
-
-# Start FastAPI backend
-info "Starting FastAPI backend..."
-uvicorn backend:app --host 0.0.0.0 --port 5000 > "$LOGS_DIR/backend.log" 2>&1 &  # Run in background
-BACKEND_PID=$!
-success "FastAPI backend started with PID $BACKEND_PID."
-
-# Wait for FastAPI to be ready
-info "Waiting for FastAPI to start..."
-TIMEOUT=60
-SECONDS_WAITED=0
-while ! nc -z 127.0.0.1 5000; do
-  sleep 1
-  SECONDS_WAITED=$((SECONDS_WAITED+1))
-  if [ $SECONDS_WAITED -ge $TIMEOUT ]; then
-      error "FastAPI did not start within $TIMEOUT seconds."
-      exit 1
-  fi
-done
-success "FastAPI is running at: http://$SERVER_IP:5000/docs"
 
 # Prevent the script from exiting
 tail -f /dev/null
