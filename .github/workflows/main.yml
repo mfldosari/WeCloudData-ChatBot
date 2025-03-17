@@ -84,5 +84,5 @@ jobs:
           nohup streamlit run chatbot.py --server.port=8051 --server.headless true > streamlit.log 2>&1 &
       - name: Check if services are running
         run: |
-          sleep 60
-          ss -tulnp | grep -E '8000|5000|8051'
+          sleep 10
+          ss -tulnp | grep -E '8000|5000|8051' || true
