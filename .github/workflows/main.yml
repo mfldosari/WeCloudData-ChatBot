@@ -14,14 +14,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache pip dependencies
+        id: cache-pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          cache: 'pip'
 
       - name: Install dependencies
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
+
+      - name: Check pip cache hit
+        if: steps.cache-pip.outputs.cache-hit == 'true'
+        run: echo "Pip cache hit! Dependencies were restored from cache."
 
       # - name: Set up environment variables
       #   run: |
@@ -42,14 +55,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache pip dependencies
+        id: cache-pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          cache: 'pip'
 
       - name: Install dependencies
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
+
+      - name: Check pip cache hit
+        if: steps.cache-pip.outputs.cache-hit == 'true'
+        run: echo "Pip cache hit! Dependencies were restored from cache."
 
       - name: Start services
         run: |
