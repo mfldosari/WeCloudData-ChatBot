@@ -77,13 +77,15 @@ jobs:
         if: steps.cache-pip.outputs.cache-hit == 'true'
         run: echo "Pip cache hit! Dependencies were restored from cache."
 
+      # Start ChromaDB, FastAPI (Uvicorn), and Streamlit
       - name: Start services
         run: |
-          nohup chroma run --path chromadb --host 0.0.0.0 --port 7000 > chroma.log 2>&1 &
-          nohup uvicorn backend:app --host 0.0.0.0 --port 4000 --reload > uvicorn.log 2>&1 &
-          nohup streamlit run chatbot.py --server.port=7051 --server.headless true > streamlit.log 2>&1 &
+          nohup chroma run --path chromadb --host 0.0.0.0 --port 8000 > chroma.log 2>&1 &
+          nohup uvicorn backend:app --host 0.0.0.0 --port 5000 --reload > uvicorn.log 2>&1 &
+          nohup streamlit run chatbot.py --server.port=8051 --server.headless true > streamlit.log 2>&1 &
+      # Wait for services to start
       - name: Check if services are running
         run: |
-          sleep 10
-          ss -tulnp | grep -E '8000|5000|8051' 
+          sleep 10  # Give processes time to start
+          ss -tulnp | grep -E '8000|5000|8051'
 
