@@ -20,11 +20,12 @@ jobs:
       - name: Run update.sh on all VMSS instances
         run: |
           az vmss extension set \
-            --resource-group ${{ secrets.RESOURCE_GROUP }} \
-            --vmss-name ${{ secrets.VMSS_NAME }} \
-            --name CustomScript \
-            --publisher Microsoft.Azure.Extensions \
-            --version 2.0 \
-            --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --vmss-name ${{ secrets.VMSS_NAME }} \
+          --name customScript \
+          --publisher Microsoft.Azure.Extensions \
+          --version 2.0 \
+          --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
+
 
 
