@@ -9,19 +9,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    # Azure Login using GitHub Secrets
-    - name: Azure Login
-      uses: azure/login@v2.2.0
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # Azure Login
+      - name: Azure Login
+        uses: azure/login@v2.2.0
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # Execute the Update Script on the VM
-    #- name: Deploy to Azure VM
-     # run: |
-      #  az vm extension set \
-       #   --resource-group ${{ secrets.RESOURCE_GROUP }} \
-        #  --vm-name ${{ secrets.VM_NAME }} \
-         # --name CustomScript \
-          #--force-update \
-          #--publisher Microsoft.Azure.Extensions \
-          #--settings '{"commandToExecute": "/home/azureuser/WeCloudData-ChatBot/update.sh"}'
+      # Execute the Update Script on VMSS instances
+      - name: Deploy to Azure VMSS
+        run: |
+          az vmss extension set \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --name ${{ secrets.VMSS_NAME }} \
+            --vmss-name ${{ secrets.VMSS_NAME }} \
+            --publisher Microsoft.Azure.Extensions \
+            --version 2.0 \
+            --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
+
