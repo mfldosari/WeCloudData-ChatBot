@@ -26,7 +26,7 @@ info "Logs will be stored in: $LOGS_DIR"
 
 # Start ChromaDB
 info "Starting ChromaDB..."
-chroma run --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &  # Run in background
+chroma run --host 0.0.0.0 --path "$CHROMA_DB_PATH" > "$LOGS_DIR/chroma.log" 2>&1 &  # Run in background
 CHROMA_PID=$!
 success "ChromaDB started with PID $CHROMA_PID."
 
