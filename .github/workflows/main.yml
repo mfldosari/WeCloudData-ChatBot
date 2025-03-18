@@ -19,13 +19,14 @@ jobs:
       # **Step 2: Deploy the Custom Script Extension to VMSS**
       - name: Run update.sh on all VMSS instances
         run: |
-          az vmss extension set \
-          --resource-group "${{ secrets.RESOURCE_GROUP }}" \
-          --vmss-name "${{ secrets.VMSS_NAME }}" \
+         az vmss extension set \
+          --resource-group "ma-chatbot-rg" \
+          --vmss-name "streamlit-uvicorn-vmss" \
           --name "CustomScript" \
           --publisher "Microsoft.Azure.Extensions" \
           --version "2.0" \
-          --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
+          --settings "{\"commandToExecute\": \"sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh\"}"
+
 
 
 
