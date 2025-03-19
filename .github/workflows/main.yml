@@ -8,26 +8,25 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # **Step 1: Azure Login**
       - name: Azure Login
         uses: azure/login@v2.2.0
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # **Step 2: Deploy the Custom Script Extension to VMSS**
-      - name: Run update.sh on all VMSS instances
+      - name: Apply Custom Script Extension
         run: |
-         az vmss extension set \
-          --resource-group "ma-chatbot-rg" \
-          --vmss-name "streamlit-uvicorn-vmss" \
-          --name "CustomScript" \
-          --publisher "Microsoft.Azure.Extensions" \
-          --version "2.0" \
-          --settings "{\"commandToExecute\": \"sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh\"}"
+          az vmss extension set \
+            --resource-group "ma-chatbot-rg" \
+            --vmss-name "streamlit-uvicorn-vmss" \
+            --name "CustomScript" \
+            --publisher "Microsoft.Azure.Extensions" \
+            --version "2.0" \
+            --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
 
-
-
-
-
+      - name: Update VMSS Instances
+        run: |
+          az vmss update-instances \
+            --resource-group "ma-chatbot-rg" \
+            --name "streamlit-uvicorn-vmss" \
+            --instance-ids "*"
