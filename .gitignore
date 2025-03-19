@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 chromadb/
+chroma_data/
 # C extensions
 *.so
 chat_logs/
