@@ -6,15 +6,49 @@ on:
       - main
 
 jobs:
-  deploy:
+  test-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'  # Specify your Python version (e.g., 3.9, 3.10)
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest psycopg2-binary fastapi uvicorn  # Add other dependencies from your requirements.txt if needed
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Step 4: Set up environment variables for testing
+      - name: Set environment variables
+        run: |
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
+          echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> $GITHUB_ENV
+
+      # Step 5: Run tests
+      - name: Run tests
+        run: |
+          pytest tests/*
+
+      # Step 6: Azure Login (only if tests pass)
       - name: Azure Login
         uses: azure/login@v2.2.0
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Apply Custom Script Extension
+      # Step 7: Deploy the Custom Script Extension to VMSS
+      - name: Run update.sh in WeCloudData-ChatBot directory on all VMSS instances
         run: |
           az vmss extension set \
             --resource-group "ma-chatbot-rg" \
@@ -24,7 +58,8 @@ jobs:
             --version "2.0" \
             --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
 
-      - name: Update VMSS Instances
+      # Step 8: Update VMSS instances
+      - name: Update VMSS instances
         run: |
           az vmss update-instances \
             --resource-group "ma-chatbot-rg" \
