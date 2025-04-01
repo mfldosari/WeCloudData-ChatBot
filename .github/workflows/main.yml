@@ -1,4 +1,4 @@
-name: CI/CD Pipeline with Direct Deployment
+name: Python App CI/CD Pipeline with Direct Deployment
 
 on:
   push:
@@ -6,32 +6,41 @@ on:
       - main
 
 jobs:
- 
-          
-  deploy:
-      runs-on: ubuntu-latest
-      steps:
-      # Step 6: Azure Login (only if tests pass)
-      - name: Azure Login
-        uses: azure/login@v2.2.0
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-      # Step 7: Deploy the Custom Script Extension to VMSS
-     # - name: Run update.sh in WeCloudData-ChatBot directory on all VMSS instances
-     #   run: |
-     #     az vmss extension set \
-     #       --resource-group "ma-chatbot-rg" \
-     #       --vmss-name "streamlit-uvicorn-vmss" \
-     #       --name "CustomScript" \
-     #       --publisher "Microsoft.Azure.Extensions" \
-     #       --version "2.0" \
-     #       --settings '{"commandToExecute": "sudo bash /home/azureuser/WeCloudData-ChatBot/update.sh"}'
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # Step 8: Update VMSS instances
-     # - name: Update VMSS instances
-      #  run: |
-       #   az vmss update-instances \
-        #    --resource-group "ma-chatbot-rg" \
-         #   --name "streamlit-uvicorn-vmss" \
-          #  --instance-ids "*"
+    # Set up Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        cache: 'pip' # caching pip dependencies
+    - run: |
+        pip install -r requirements.txt
+
+    # Run tests (Placeholder for actual tests)
+    - name: Run tests
+      run: |
+        echo "Run tests"
+
+    # Azure Login using GitHub Secrets
+    - name: Azure Login
+      uses: azure/login@v2.2.0
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Execute the Update Script on the VM
+    - name: Deploy to Azure VM
+      run: |
+        az vm extension set \
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --vm-name ${{ secrets.VMSS_NAME }} \
+          --name CustomScript \
+          --force-update \
+          --publisher Microsoft.Azure.Extensions \
+          --settings '{"commandToExecute": "/home/azureuser/WeCloudData-ChatBot/update.sh"}'
