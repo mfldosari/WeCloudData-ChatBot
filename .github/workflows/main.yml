@@ -24,11 +24,6 @@ jobs:
     - run: |
         pip install -r requirements.txt
 
-    # Run tests (Placeholder for actual tests)
-    - name: Run tests
-      run: |
-        echo "Run tests"
-
     # Azure Login using GitHub Secrets
     - name: Azure Login
       uses: azure/login@v2.2.0
