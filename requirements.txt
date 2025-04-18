@@ -3,3 +3,4 @@ streamlit
 requests
 azure-identity
 azure-keyvault-secrets
+Pillow
