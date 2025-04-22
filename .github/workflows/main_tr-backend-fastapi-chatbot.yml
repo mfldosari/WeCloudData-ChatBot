@@ -34,10 +34,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/requirements.txt --target=".python_packages/lib/site-packages"
 
-      - name: Zip artifact for deployment
+      - name: Prepare and zip artifact for deployment
         run: |
+          mkdir -p ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/.python_packages
+          cp -r .python_packages/* ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/.python_packages/
           cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          zip -r ../release.zip . ../.python_packages
+          zip -r ../release.zip .
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
